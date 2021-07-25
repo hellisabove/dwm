@@ -71,8 +71,8 @@ static const char *upvol[]   = { "amixer", "-q", "set", "Master", "5%+", "unmute
 static const char *downvol[] = { "amixer", "-q", "set", "Master", "5%-", "unmute", NULL };
 static const char *mutevol[] = { "amixer", "-q", "set", "Master", "toggle", NULL };
 //Brightness Controls
-static const char *brightup[]       = { "/usr/bin/xbacklight", "-inc", "10", NULL};
-static const char *brightdown[]     = { "/usr/bin/xbacklight", "-dec", "10", NULL};
+static const char *brightup[]       = { "/usr/bin/brightness", "+10", NULL};
+static const char *brightdown[]     = { "/usr/bin/brightness", "-10", NULL};
 //Launches LibreWolf Browser
 static const char *browser[] = { "librewolf", NULL };
 
