@@ -200,6 +200,7 @@ static unsigned int getsystraywidth();
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
+static int  ispanel(Client *c);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
@@ -808,6 +809,8 @@ drawbar(Monitor *m)
 	}
 
 	for (c = m->clients; c; c = c->next) {
+        // prevent showing the panel as active application:
+        if (ispanel(c)) continue;
 		occ |= c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
@@ -894,11 +897,14 @@ focus(Client *c)
 			selmon = c->mon;
 		if (c->isurgent)
 			seturgent(c, 0);
-		detachstack(c);
-		attachstack(c);
-		grabbuttons(c, 1);
-		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
-		setfocus(c);
+        // prevents the panel getting focus when tag switching:
+		if (!ispanel(c)) {
+            detachstack(c);
+            attachstack(c);
+            grabbuttons(c, 1);
+            XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+            setfocus(c);
+        }
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -954,6 +960,7 @@ focusstack(const Arg *arg)
 	if (c) {
 		focus(c);
 		restack(selmon);
+        if (ispanel(c)) focusstack(arg);
 	}
 }
 
@@ -1082,6 +1089,11 @@ grabkeys(void)
 	}
 }
 
+int
+ispanel(Client *c) {
+    return !strcmp(c->name, panel[0]);
+}
+
 void
 incnmaster(const Arg *arg)
 {
@@ -1167,7 +1179,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
 	c->bw = borderpx;
-
+    // no border - even when active
+    if (ispanel(c)) c->bw = c->oldbw = 0;
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
 	XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColBorder].pixel);
@@ -1439,6 +1452,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	c->oldw = c->w; c->w = wc.width = w;
 	c->oldh = c->h; c->h = wc.height = h;
 	wc.border_width = c->bw;
+    if (ispanel(c)) c->y = c->oldy = c->bw = wc.y = wc.border_width = 0;
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
@@ -2210,7 +2224,7 @@ void
 updatestatus(void)
 {
 	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "dwm-"VERSION);
+		strcpy(stext, " "); // no shining of dwm version thru panel, when transparent
 	drawbar(selmon);
 	updatesystray();
 }
